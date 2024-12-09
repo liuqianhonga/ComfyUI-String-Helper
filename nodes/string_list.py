@@ -12,6 +12,10 @@ class StringList:
                     "max": 10,
                     "step": 1
                 }),
+                "selected_numbers": ("STRING", {
+                    "default": "",
+                    "placeholder": "e.g. 1,3,5 (leave empty to use random_select_count)"
+                }),
                 "translate_output": ("BOOLEAN", {
                     "default": False,
                 }),
@@ -85,23 +89,41 @@ class StringList:
             print(f"Translation error: {str(e)}")
             return strings
 
-    def process(self, random_select_count, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
+    def get_selected_strings(self, all_strings, numbers_str):
+        """Get strings by their numbers (1-based)"""
+        try:
+            # Convert numbers string to list of integers (1-based to 0-based)
+            numbers = [int(i.strip()) - 1 for i in numbers_str.split(',') if i.strip()]
+            # Filter valid indices and get corresponding strings
+            return [all_strings[i] for i in numbers if 0 <= i < len(all_strings)]
+        except ValueError:
+            print("Invalid number format. Please use comma-separated numbers (e.g., '1,3,5')")
+            return []
+
+    def process(self, random_select_count, selected_numbers, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
         # Create a list of non-empty strings from inputs
         input_strings = [text for text in [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10] if text.strip()]
         
-        # Process input strings based on random_select_count
+        # Early return if no input strings
         if not input_strings:
-            selected_input_strings = []
-        elif random_select_count == -1:
-            # Use all input strings
-            selected_input_strings = input_strings
-        elif random_select_count == 0:
-            # Select none
-            selected_input_strings = []
+            return ([], [])
+
+        # Process string selection
+        if selected_numbers.strip():
+            # Use selected numbers if provided
+            selected_input_strings = self.get_selected_strings(input_strings, selected_numbers)
         else:
-            # Randomly select specified number of strings
-            count = min(random_select_count, len(input_strings))
-            selected_input_strings = random.sample(input_strings, count)
+            # Otherwise use random selection
+            if random_select_count == -1:
+                # Use all input strings
+                selected_input_strings = input_strings
+            elif random_select_count == 0:
+                # Select none
+                selected_input_strings = []
+            else:
+                # Randomly select specified number of strings
+                count = min(random_select_count, len(input_strings))
+                selected_input_strings = random.sample(input_strings, count)
         
         # Combine with optional string_list if provided
         if string_list is not None:
