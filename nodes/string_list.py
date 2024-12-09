@@ -1,4 +1,5 @@
 import random
+import translators.server as tss
 
 class StringList:
     @classmethod
@@ -10,6 +11,9 @@ class StringList:
                     "min": -1,
                     "max": 10,
                     "step": 1
+                }),
+                "translate_output": ("BOOLEAN", {
+                    "default": False,
                 }),
                 "string1": ("STRING", {
                     "multiline": True,
@@ -72,7 +76,15 @@ class StringList:
     FUNCTION = "process"
     CATEGORY = "String Helper"
 
-    def process(self, random_select_count, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
+    def translate_strings(self, strings):
+        """Translate a list of strings to English using Bing translator with auto language detection"""
+        try:
+            return [tss.bing(text, from_language='auto', to_language='en') for text in strings]
+        except Exception as e:
+            print(f"Translation error: {str(e)}")
+            return strings
+
+    def process(self, random_select_count, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
         # Create a list of non-empty strings from inputs
         input_strings = [text for text in [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10] if text.strip()]
         
@@ -96,6 +108,10 @@ class StringList:
             final_strings = selected_input_strings + string_list
         else:
             final_strings = selected_input_strings
+
+        # Translate strings if enabled
+        if translate_output and final_strings:
+            final_strings = self.translate_strings(final_strings)
 
         # Return the same list for both outputs
         return (final_strings, final_strings)
