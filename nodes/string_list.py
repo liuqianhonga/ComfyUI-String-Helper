@@ -73,6 +73,7 @@ class StringList:
     
     RETURN_TYPES = ("LIST", "STRING",)
     RETURN_NAMES = ("string_list", "strings",)
+    OUTPUT_IS_LIST = (False, True)
     FUNCTION = "process"
     CATEGORY = "String Helper"
 
