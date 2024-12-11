@@ -1,5 +1,5 @@
 import random
-import translators.server as tss
+from ..translation_utils import TranslationUtils
 
 class StringList:
     @classmethod
@@ -84,7 +84,8 @@ class StringList:
     def translate_strings(self, strings):
         """Translate a list of strings to English using Bing translator with auto language detection"""
         try:
-            return [tss.bing(text, from_language='auto', to_language='en') for text in strings]
+            translated_strings = TranslationUtils.translate_with_length_check(strings, 'en')
+            return translated_strings
         except Exception as e:
             print(f"Translation error: {str(e)}")
             return strings
