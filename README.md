@@ -196,3 +196,60 @@ selected_numbers: "1,3"
 translate_output: True
 输出: 选择第1和第3个中文字符串并翻译为英文
 ```
+
+## String List To CSV 节点使用说明
+
+String List To CSV 节点允许你将字符串列表保存到 CSV 文件中，可选择是否翻译字符串以及是追加还是覆写文件。生成的 CSV 文件遵循与模板文件相同的格式。
+
+### 节点参数
+
+- **string_list** (必需)：输入的字符串列表
+- **csv_file** (必需)：CSV 文件保存路径，默认为 `output/string_list_output.csv`
+- **translate** (必需)：布尔值，默认为 `False`。设置为 `True` 时会将输入的字符串翻译为中文，作为 `translate_string` 列的值
+- **append_mode** (必需)：布尔值，默认为 `True`。设置为 `True` 时会追加到现有文件，否则会覆写文件。注意：如果目标文件不存在，无论此设置如何都会创建新文件
+
+### 返回值
+
+- **processed_strings**：成功写入到 CSV 文件的字符串列表
+- **skipped_strings**：在追加模式下，由于已存在而被跳过的字符串列表
+
+### 使用示例
+
+1. 保存字符串列表到新文件：
+```python
+string_list: ["Hello World", "Good Morning"]
+csv_file: "output/my_strings.csv"
+translate: True
+append_mode: False
+输出文件内容:
+string,translate_string
+Hello World,你好世界
+Good Morning,早安
+返回值:
+processed_strings: ["Hello World", "Good Morning"]
+skipped_strings: []
+```
+
+2. 追加到现有文件（避免重复）：
+```python
+string_list: ["Hello World", "Artificial Intelligence"]
+csv_file: "output/my_strings.csv"
+translate: True
+append_mode: True
+输出文件内容:
+string,translate_string
+Hello World,你好世界
+Good Morning,早安
+Artificial Intelligence,人工智能
+返回值:
+processed_strings: ["Artificial Intelligence"]
+skipped_strings: ["Hello World"]
+```
+
+### 注意事项
+
+- 如果使用相对路径，文件会保存在项目根目录下
+- 如果目标目录不存在，会自动创建
+- 追加模式下，会自动检查并跳过已存在的字符串，避免重复
+- 如果不启用翻译，`translate_string` 列将为空
+- 节点会返回处理结果，包括成功写入的字符串和被跳过的字符串

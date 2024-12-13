@@ -220,3 +220,105 @@ class StringListFromCSV(BaseStringList):
         # Read strings from CSV file
         input_strings = self.read_csv_file(csv_file, use_translated)
         return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
+
+
+class StringListToCSV:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "string_list": ("LIST",),
+                "csv_file": ("STRING", {
+                    "default": "output/string_list_output.csv",
+                    "placeholder": "Path to save CSV file"
+                }),
+                "translate": ("BOOLEAN", {
+                    "default": False,
+                }),
+                "append_mode": ("BOOLEAN", {
+                    "default": True,
+                    "label": "Append to file"
+                }),
+            }
+        }
+    
+    RETURN_TYPES = ("LIST", "LIST",)
+    RETURN_NAMES = ("processed_strings", "skipped_strings",)
+    FUNCTION = "write_to_csv"
+    CATEGORY = "String Helper"
+    OUTPUT_NODE = True
+
+    def write_to_csv(self, string_list, csv_file, translate, append_mode):
+        """Write string list to CSV file with optional translation"""
+        processed_strings = []
+        skipped_strings = []
+        
+        try:
+            # Handle file path
+            if os.path.isabs(csv_file):
+                # If it's an absolute path, use it directly
+                csv_path = csv_file
+            else:
+                # If it's a relative path, search from project root directory
+                current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                csv_path = os.path.join(current_dir, csv_file)
+
+            # Ensure the output directory exists
+            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+            # Translate strings if needed
+            translated_strings = []
+            if translate:
+                translated_strings = TranslationUtils.translate_with_length_check(string_list, 'zh')
+
+            # Read existing data and check for duplicates
+            existing_strings = set()
+            if os.path.exists(csv_path):
+                try:
+                    with open(csv_path, 'r', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
+                            print(f"Target CSV file must have 'string' and 'translate_string' columns")
+                            return [], string_list
+                        for row in reader:
+                            existing_strings.add(row['string'])
+                except Exception as e:
+                    print(f"Error reading existing CSV file: {str(e)}")
+                    return [], string_list
+
+            # Determine write mode based on append_mode and file existence
+            if not os.path.exists(csv_path):
+                # If file doesn't exist, always use write mode
+                mode = 'w'
+            else:
+                # If file exists and append mode is True, use append mode
+                mode = 'a' if append_mode else 'w'
+
+            with open(csv_path, mode, encoding='utf-8', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=['string', 'translate_string'])
+                
+                # Write header if it's a new file or overwriting
+                if mode == 'w':
+                    writer.writeheader()
+                    existing_strings.clear()  # Clear existing strings if overwriting
+
+                # Write data
+                for i, string in enumerate(string_list):
+                    # Skip if string already exists in append mode
+                    if mode == 'a' and string in existing_strings:
+                        skipped_strings.append(string)
+                        continue
+
+                    row = {
+                        'string': string,
+                        'translate_string': translated_strings[i] if translate else ''
+                    }
+                    writer.writerow(row)
+                    processed_strings.append(string)
+
+            print(f"Successfully processed {len(processed_strings)} strings ({len(skipped_strings)} skipped) to {csv_path}")
+            return processed_strings, skipped_strings
+
+        except Exception as e:
+            print(f"Error writing to CSV file: {str(e)}")
+            return [], string_list
