@@ -181,6 +181,8 @@ class StringList(BaseStringList):
             }
         }
 
+    OUTPUT_IS_LIST = (False, True)
+
     def process(self, random_select_count, selected_numbers, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
         # Create a list of non-empty strings from inputs
         input_strings = [text for text in [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10] if text.strip()]
