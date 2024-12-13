@@ -1,14 +1,53 @@
 import random
 import os
 import csv
+import chardet
 from ..translation_utils import TranslationUtils
 
 class BaseStringList:
+    """Base class for string list operations"""
+    
     RETURN_TYPES = ("LIST", "STRING",)
     RETURN_NAMES = ("string_list", "strings",)
-    OUTPUT_IS_LIST = (False, True)
     FUNCTION = "process"
     CATEGORY = "String Helper"
+
+    @staticmethod
+    def get_encoding(csv_path):
+        with open(csv_path, 'rb') as f:
+            raw_data = f.read()
+            result = chardet.detect(raw_data)
+            return result['encoding'] if result else None
+
+    @staticmethod
+    def read_csv_with_encoding(csv_path):
+        """Read CSV file and detect encoding"""
+        encoding = BaseStringList.get_encoding(csv_path)
+        if encoding is None:
+            print("Unable to detect encoding for CSV file")
+            return None, None
+        print(f"Detected encoding for CSV file: {encoding}")
+
+        try:
+            with open(csv_path, 'r', encoding=encoding, errors='replace') as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
+                    print(f"CSV file must have 'string' and 'translate_string' columns")
+                    return None, None
+                rows = list(reader)
+            print(f"Successfully read CSV file using {encoding} encoding")
+            return rows, encoding
+        except Exception as e:
+            print(f"Failed to read with {encoding} encoding: {str(e)}")
+        return None, None
+
+    @staticmethod
+    def get_absolute_path(file_path):
+        """Convert relative path to absolute path based on project root"""
+        if os.path.isabs(file_path):
+            return file_path
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(current_dir, file_path)
 
     def translate_strings(self, strings):
         """Translate a list of strings to English using Bing translator with auto language detection"""
@@ -159,75 +198,57 @@ class StringListFromCSV(BaseStringList):
                 }),
                 "use_translated": ("BOOLEAN", {
                     "default": False,
-                    "label": "Use Translated String"
                 }),
                 "random_select_count": ("INT", {
                     "default": -1,
                     "min": -1,
-                    "max": 10,
-                    "step": 1
+                    "max": 999999,
+                    "step": 1,
+                    "display": "number"
                 }),
                 "selected_numbers": ("STRING", {
                     "default": "",
-                    "placeholder": "e.g. 1,3,5 (leave empty to use random_select_count)"
+                    "multiline": False,
+                    "placeholder": "Comma-separated numbers (e.g., 1,3,5)"
                 }),
                 "translate_output": ("BOOLEAN", {
                     "default": False,
                 }),
             },
             "optional": {
-                "string_list": ("LIST",)
+                "string_list": ("LIST",),
             }
         }
+    
+    RETURN_TYPES = ("LIST", "STRING",)
+    RETURN_NAMES = ("string_list", "strings",)
+    OUTPUT_IS_LIST = (False, True)
+    FUNCTION = "read_strings_from_csv"
+    CATEGORY = "String Helper"
 
     def read_csv_file(self, csv_file, use_translated=False):
         """Read strings from CSV file with template format"""
-        encodings = ['utf-8', 'gbk', 'gb2312', 'gb18030', 'big5']
+        csv_path = self.get_absolute_path(csv_file)
         
-        # Handle file path
-        if os.path.isabs(csv_file):
-            # If it's an absolute path, use it directly
-            csv_path = csv_file
-        else:
-            # If it's a relative path, search from project root directory
-            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            csv_path = os.path.join(current_dir, csv_file)
-        
-        for encoding in encodings:
-            try:
-                with open(csv_path, 'r', encoding=encoding) as f:
-                    reader = csv.DictReader(f)
-                    if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
-                        print(f"CSV file must have 'string' and 'translate_string' columns")
-                        return []
-                    
-                    # Read strings based on the use_translated flag
-                    column = 'translate_string' if use_translated else 'string'
-                    strings = [row[column].strip() for row in reader if row and row[column].strip()]
-                
-                print(f"Successfully read CSV file using {encoding} encoding")
-                return strings
-            except UnicodeDecodeError:
-                continue
-            except Exception as e:
-                print(f"Error reading CSV file: {str(e)}")
-                return []
-        
-        print("Failed to read CSV file with any of the supported encodings")
-        return []
+        rows, _ = self.read_csv_with_encoding(csv_path)
+        if rows is None:
+            return []
+            
+        # Read strings based on the use_translated flag
+        column = 'translate_string' if use_translated else 'string'
+        return [row[column].strip() for row in rows if row and row[column].strip()]
 
-    def process(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, string_list=None):
+    def read_strings_from_csv(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, string_list=None):
         # Read strings from CSV file
         input_strings = self.read_csv_file(csv_file, use_translated)
         return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
 
 
-class StringListToCSV:
+class StringListToCSV(BaseStringList):
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "string_list": ("LIST",),
                 "csv_file": ("STRING", {
                     "default": "output/string_list_output.csv",
                     "placeholder": "Path to save CSV file"
@@ -239,52 +260,54 @@ class StringListToCSV:
                     "default": True,
                     "label": "Append to file"
                 }),
+            },
+            "optional": {
+                "string": ("STRING", {"forceInput": True}),
+                "string_list": ("LIST", {"forceInput": True}),
             }
         }
     
     RETURN_TYPES = ("LIST", "LIST",)
     RETURN_NAMES = ("processed_strings", "skipped_strings",)
+    OUTPUT_NODE = True
     FUNCTION = "write_to_csv"
     CATEGORY = "String Helper"
-    OUTPUT_NODE = True
 
-    def write_to_csv(self, string_list, csv_file, translate, append_mode):
+    def write_to_csv(self, csv_file, translate, append_mode, string=None, string_list=None):
         """Write string list to CSV file with optional translation"""
+        # Initialize processed_strings and skipped_strings
         processed_strings = []
         skipped_strings = []
-        
+
+        # If neither string nor string_list is provided, return empty lists
+        if string is None and string_list is None:
+            return processed_strings, skipped_strings
+            
+        # Merge string_list and string if both are provided
+        if string_list and string:
+            string_list = string_list + [string]
+        elif string and not string_list:
+            string_list = [string]
+        elif string_list is None:
+            string_list = []
+
+        if len(string_list) == 0 or not string_list:
+            return processed_strings, skipped_strings
+
         try:
-            # Handle file path
-            if os.path.isabs(csv_file):
-                # If it's an absolute path, use it directly
-                csv_path = csv_file
-            else:
-                # If it's a relative path, search from project root directory
-                current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                csv_path = os.path.join(current_dir, csv_file)
+            csv_path = self.get_absolute_path(csv_file)
 
             # Ensure the output directory exists
             os.makedirs(os.path.dirname(csv_path), exist_ok=True)
 
-            # Translate strings if needed
-            translated_strings = []
-            if translate:
-                translated_strings = TranslationUtils.translate_with_length_check(string_list, 'zh')
-
             # Read existing data and check for duplicates
             existing_strings = set()
+            current_encoding = 'utf-8'
             if os.path.exists(csv_path):
-                try:
-                    with open(csv_path, 'r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
-                            print(f"Target CSV file must have 'string' and 'translate_string' columns")
-                            return [], string_list
-                        for row in reader:
-                            existing_strings.add(row['string'])
-                except Exception as e:
-                    print(f"Error reading existing CSV file: {str(e)}")
-                    return [], string_list
+                rows, encoding = self.read_csv_with_encoding(csv_path)
+                if rows is not None:
+                    existing_strings = {row['string'] for row in rows}
+                    current_encoding = encoding
 
             # Determine write mode based on append_mode and file existence
             if not os.path.exists(csv_path):
@@ -294,7 +317,7 @@ class StringListToCSV:
                 # If file exists and append mode is True, use append mode
                 mode = 'a' if append_mode else 'w'
 
-            with open(csv_path, mode, encoding='utf-8', newline='') as f:
+            with open(csv_path, mode, encoding=current_encoding, newline='') as f:
                 writer = csv.DictWriter(f, fieldnames=['string', 'translate_string'])
                 
                 # Write header if it's a new file or overwriting
@@ -309,14 +332,17 @@ class StringListToCSV:
                         skipped_strings.append(string)
                         continue
 
+                    # Translate string only when writing
+                    translate_string = TranslationUtils.translate_with_length_check([string], 'zh')[0] if translate else ''
+
                     row = {
                         'string': string,
-                        'translate_string': translated_strings[i] if translate else ''
+                        'translate_string': translate_string
                     }
                     writer.writerow(row)
                     processed_strings.append(string)
 
-            print(f"Successfully processed {len(processed_strings)} strings ({len(skipped_strings)} skipped) to {csv_path}")
+            print(f"Successfully processed {len(processed_strings)} strings ({len(skipped_strings)} skipped) to {csv_path} using {current_encoding} encoding")
             return processed_strings, skipped_strings
 
         except Exception as e:
