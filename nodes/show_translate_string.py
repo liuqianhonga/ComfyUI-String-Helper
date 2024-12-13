@@ -17,6 +17,7 @@ class ShowTranslateString:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("translated_strings",)
     OUTPUT_IS_LIST = (True,)
+    OUTPUT_NODE = True
     FUNCTION = "translate"
     CATEGORY = "String Helper"
 

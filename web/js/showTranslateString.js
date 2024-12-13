@@ -58,7 +58,7 @@ app.registerExtension({
             nodeType.prototype.onConfigure = function () {
                 onConfigure?.apply(this, arguments);
                 if (this.widgets_values?.length) {
-                    populate.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
+                    populate.call(this, this.widgets_values.slice(2));
                 }
             };
         }
