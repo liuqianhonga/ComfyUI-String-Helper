@@ -108,9 +108,91 @@ string3: "欢迎"
 输出: ["Hello", "Welcome"]
 ```
 
+2. 指定编号选择字符串：
+```python
+selected_numbers: "1,3"
+translate_output: False
+string1: "你好"
+string2: "世界"
+string3: "欢迎"
+输出: ["你好", "欢迎"]
+```
+
 3. 使用外部字符串列表：
 ```python
 random_select_count: 2
 string_list: ["额外1", "额外2"]
 输出: 随机选择2个字符串并合并外部列表
+```
+
+## String List From CSV 节点使用说明
+
+String List From CSV 节点允许你从 CSV 文件中读取字符串列表。这个节点提供了与 String List 节点类似的功能，但数据源来自 CSV 文件。节点支持从预定义的模板格式 CSV 文件中读取原始字符串或其翻译版本。
+
+### 节点参数
+
+- **csv_file** (必需)：CSV 文件路径，默认指向模板文件 `template/string_list.csv`
+- **use_translated** (必需)：布尔值，默认为 `False`。设置为 `True` 时使用 CSV 中的翻译字符串列
+- **random_select_count** (必需)：随机选择字符串的数量。特殊值:
+  - `-1`：返回所有字符串
+  - `0`：返回空列表
+  - `>0`：随机选择指定数量的字符串
+- **selected_numbers** (可选)：指定要选择的字符串编号，多个编号用逗号分隔，如"1,3,5"。当此字段有值时，`random_select_count` 失效
+- **translate_output** (可选)：布尔值，默认为 `False`。启用后，将选定的字符串从自动检测的语言翻译为英文
+- **string_list** (可选)：额外的字符串列表输入，用于合并外部字符串列表
+
+### CSV 文件格式要求
+
+CSV 文件必须遵循以下模板格式：
+- 第一行为标题行，包含两列：`string` 和 `translate_string`
+- `string` 列：英文原始字符串
+- `translate_string` 列：对应的中文翻译
+- 文件编码支持：UTF-8（推荐）、GBK、GB2312、GB18030、BIG5
+
+模板示例：
+```csv
+string,translate_string
+Hello World,你好世界
+Good Morning,早安
+Artificial Intelligence,人工智能
+Machine Learning,机器学习
+Image Generation,图像生成
+```
+
+### 使用示例
+
+1. 读取英文原始字符串：
+```python
+csv_file: "strings.csv"
+use_translated: False
+random_select_count: -1
+translate_output: False
+输出: ["Hello World", "Good Morning", "Artificial Intelligence", ...]
+```
+
+2. 读取中文翻译字符串：
+```python
+csv_file: "strings.csv"
+use_translated: True
+random_select_count: 3
+translate_output: False
+输出: ["你好世界", "早安", "人工智能"]
+```
+
+3. 选择指定编号的英文字符串并翻译：
+```python
+csv_file: "strings.csv"
+use_translated: False
+selected_numbers: "1,3"
+translate_output: True
+输出: 选择第1和第3个英文字符串并翻译（注：由于原文已经是英文，翻译可能会返回相同或相似的结果）
+```
+
+4. 选择指定编号的中文字符串并翻译为英文：
+```python
+csv_file: "strings.csv"
+use_translated: True
+selected_numbers: "1,3"
+translate_output: True
+输出: 选择第1和第3个中文字符串并翻译为英文
 ```

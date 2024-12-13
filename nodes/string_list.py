@@ -1,4 +1,6 @@
 import random
+import os
+import csv
 from ..translation_utils import TranslationUtils
 
 class BaseStringList:
@@ -152,8 +154,12 @@ class StringListFromCSV(BaseStringList):
         return {
             "required": {
                 "csv_file": ("STRING", {
-                    "default": "",
-                    "placeholder": "Path to CSV file"
+                    "default": "template/string_list.csv",
+                    "placeholder": "Path to CSV file (template: string,translate_string)"
+                }),
+                "use_translated": ("BOOLEAN", {
+                    "default": False,
+                    "label": "Use Translated String"
                 }),
                 "random_select_count": ("INT", {
                     "default": -1,
@@ -174,17 +180,31 @@ class StringListFromCSV(BaseStringList):
             }
         }
 
-    def read_csv_file(self, csv_file):
-        """Read strings from CSV file"""
+    def read_csv_file(self, csv_file, use_translated=False):
+        """Read strings from CSV file with template format"""
         encodings = ['utf-8', 'gbk', 'gb2312', 'gb18030', 'big5']
+        
+        # Handle file path
+        if os.path.isabs(csv_file):
+            # If it's an absolute path, use it directly
+            csv_path = csv_file
+        else:
+            # If it's a relative path, search from project root directory
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            csv_path = os.path.join(current_dir, csv_file)
         
         for encoding in encodings:
             try:
-                import csv
-                with open(csv_file, 'r', encoding=encoding) as f:
-                    reader = csv.reader(f)
-                    # Read all non-empty strings from the first column
-                    strings = [row[0].strip() for row in reader if row and row[0].strip()]
+                with open(csv_path, 'r', encoding=encoding) as f:
+                    reader = csv.DictReader(f)
+                    if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
+                        print(f"CSV file must have 'string' and 'translate_string' columns")
+                        return []
+                    
+                    # Read strings based on the use_translated flag
+                    column = 'translate_string' if use_translated else 'string'
+                    strings = [row[column].strip() for row in reader if row and row[column].strip()]
+                
                 print(f"Successfully read CSV file using {encoding} encoding")
                 return strings
             except UnicodeDecodeError:
@@ -196,7 +216,7 @@ class StringListFromCSV(BaseStringList):
         print("Failed to read CSV file with any of the supported encodings")
         return []
 
-    def process(self, csv_file, random_select_count, selected_numbers, translate_output, string_list=None):
+    def process(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, string_list=None):
         # Read strings from CSV file
-        input_strings = self.read_csv_file(csv_file)
+        input_strings = self.read_csv_file(csv_file, use_translated)
         return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
