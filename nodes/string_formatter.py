@@ -38,11 +38,11 @@ class StringFormatter:
     def format_string(cls, template, arg1=None, arg2=None, arg3=None, arg4=None, 
                      arg5=None, arg6=None, arg7=None, arg8=None, arg9=None, arg10=None):
         try:
-            # Create a dictionary of non-None arguments
+            # Create a dictionary of all arguments
             args_dict = {
                 name: value 
                 for name, value in locals().items() 
-                if name.startswith('arg') and value is not None
+                if name.startswith('arg')
             }
             
             # Format string using f-string style with the arguments dictionary
