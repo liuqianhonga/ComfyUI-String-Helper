@@ -47,6 +47,7 @@ class StringFormatter:
             
             # Format string using f-string style with the arguments dictionary
             result = eval(f"f'''{template}'''", args_dict)
-            return (result,)
+            return {"ui": {"formatted_string": (result,)}, "result": (result,)}
         except Exception as e:
-            return (f"Format Error: {str(e)}",) 
+            error_msg = f"Format Error: {str(e)}"
+            return {"ui": {"formatted_string": (error_msg,)}, "result": (error_msg,)}
