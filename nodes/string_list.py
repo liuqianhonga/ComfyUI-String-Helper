@@ -305,11 +305,12 @@ class StringListToCSV(BaseStringList):
         if string is None and string_list is None:
             return processed_strings, skipped_strings
             
-        # Merge string_list and string if both are provided
-        if string_list and string:
-            string_list = string_list + [string]
-        elif string and not string_list:
-            string_list = [string]
+        # Convert string to list if it's a list or tuple
+        if string is not None:
+            if isinstance(string, (list, tuple)):
+                string_list = (string_list or []) + list(string)
+            else:
+                string_list = (string_list or []) + [string]
         elif string_list is None:
             string_list = []
 
