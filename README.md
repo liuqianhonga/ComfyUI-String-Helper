@@ -259,3 +259,59 @@ skipped_strings: []
 - 如果不启用翻译，`translate_string` 列将为空
 - 如果没有提供任何输入（string 和 string_list 都为空），节点将返回空列表
 - 如果提供的字符串列表为空，节点也将返回空列表
+
+## String Matcher 节点使用说明
+
+String Matcher 节点用于从一组条件匹配规则中找到与输入值匹配的结果。每个条件规则都是以 "条件:值" 的格式定义的。
+
+### 节点参数
+
+- **condition_list** (必需)：多行文本，每行包含一个匹配规则，格式为 "条件:值"
+- **match_value** (必需)：要匹配的值，支持任意类型（会被转换为字符串进行匹配）
+- **default_value** (必需)：当没有找到匹配项时返回的默认值，默认为空字符串
+
+### 使用示例
+
+1. 基础匹配：
+```python
+condition_list: """
+red:red color
+blue:blue color
+green:green color
+"""
+match_value: "red"
+default_value: "unknown color"
+输出: "red color"
+```
+
+2. 数字匹配：
+```python
+condition_list: """
+1:one
+2:two
+3:three
+"""
+match_value: 2  # 数字类型会被转换为字符串 "2"
+default_value: "unknown number"
+输出: "two"
+```
+
+3. 使用默认值：
+```python
+condition_list: """
+red:red color
+blue:blue color
+"""
+match_value: "yellow"
+default_value: "unknown color"
+输出: "unknown color"  # 没有找到匹配项时返回默认值
+```
+
+### 注意事项
+
+- 每个条件规则必须包含一个冒号 (:) 来分隔条件和值
+- 匹配值（match_value）可以是任意类型，会被自动转换为字符串进行匹配
+- 匹配是精确匹配，大小写敏感
+- 如果找不到匹配项，将返回 default_value 指定的值
+- 条件列表中的空行会被自动忽略
+- 如果一个条件规则格式不正确（没有冒号），该规则会被跳过

@@ -1,10 +1,14 @@
-class AnyType(str):
-    def __ne__(self, __value: object) -> bool:
-        return False
-
-ANY = AnyType("*")
+from .lib import ANY
 
 class StringFormatter:
+    """
+    A node that formats a string using Python's f-string syntax.
+    Supports up to 10 input arguments.
+    """
+    
+    def __init__(self):
+        pass
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -16,16 +20,7 @@ class StringFormatter:
                 }),
             },
             "optional": {
-                "arg1": (ANY, {"default": None}),
-                "arg2": (ANY, {"default": None}),
-                "arg3": (ANY, {"default": None}),
-                "arg4": (ANY, {"default": None}),
-                "arg5": (ANY, {"default": None}),
-                "arg6": (ANY, {"default": None}),
-                "arg7": (ANY, {"default": None}),
-                "arg8": (ANY, {"default": None}),
-                "arg9": (ANY, {"default": None}),
-                "arg10": (ANY, {"default": None}),
+                **{f"arg{i}": (ANY, {"default": None}) for i in range(1, 11)}
             }
         }
     
