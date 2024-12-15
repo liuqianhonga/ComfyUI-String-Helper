@@ -125,80 +125,63 @@ string_list: ["额外1", "额外2"]
 输出: 随机选择2个字符串并合并外部列表
 ```
 
-## String List From CSV 节点使用说明
+## StringListFromCSV 节点使用说明
 
-String List From CSV 节点允许你从 CSV 文件中读取字符串列表。这个节点提供了与 String List 节点类似的功能，但数据源来自 CSV 文件。节点支持从预定义的模板格式 CSV 文件中读取原始字符串或其翻译版本。
+StringListFromCSV 节点允许你从 CSV 文件中读取和选择字符串。这个节点提供了与 StringList 节点类似的功能，但数据源来自 CSV 文件。节点支持从预定义的模板格式 CSV 文件中读取原始字符串或其翻译版本。
 
 ### 节点参数
 
-必需参数：
-- **csv_file**：CSV 文件路径，默认指向模板文件 `template/string_list.csv`
-- **use_translated**：布尔值，默认为 `False`。设置为 `True` 时使用 CSV 中的翻译字符串列
-- **random_select_count**：随机选择字符串的数量。特殊值:
+- **csv_file** (必需)：CSV 文件路径，支持相对路径和绝对路径
+- **use_translated** (必需)：布尔值，默认为 `False`。启用后，使用 `translate_string` 列的内容
+- **random_select_count** (必需)：随机选择字符串的数量。特殊值:
   - `-1`：返回所有字符串
   - `0`：返回空列表
-  - `n > 0`：随机选择 n 个字符串
-- **selected_numbers**：指定选择的字符串序号（从1开始），用逗号分隔，如 "1,3,5"。优先级高于 random_select_count
-- **translate_output**：布尔值，默认为 `False`。设置为 `True` 时会将输出的字符串翻译为英文
-
-可选参数：
-- **string_list**：输入的字符串列表，可以为空。如果提供，会将从 CSV 读取的字符串添加到此列表中
+  - `>0`：随机选择指定数量的字符串
+- **selected_numbers** (必需)：指定要选择的字符串编号，多个编号用逗号分隔，如"1,3,5"。当此字段有值时，`random_select_count` 失效
+- **translate_output** (必需)：布尔值，默认为 `False`。启用后，将选定的字符串翻译为英文
+- **reuse_last_result** (必需)：布尔值，默认为 `False`。控制是否重用上次的随机结果：
+  - `False`：每次执行都重新随机选择
+  - `True`：保持使用上一次的随机结果
+- **string_list** (可选)：额外的字符串列表输入，用于合并外部字符串列表
 
 ### CSV 文件格式要求
 
-CSV 文件必须遵循以下模板格式：
-- 第一行为标题行，包含两列：`string` 和 `translate_string`
-- `string` 列：英文原始字符串
+CSV 文件必须包含以下列：
+- `string` 列：原始字符串
 - `translate_string` 列：对应的中文翻译
 - 文件编码支持：UTF-8（推荐）、GBK、GB2312、GB18030、BIG5
 
-模板示例：
-```csv
-string,translate_string
-Hello World,你好世界
-Good Morning,早安
-Artificial Intelligence,人工智能
-Machine Learning,机器学习
-Image Generation,图像生成
-```
-
 ### 使用示例
 
-1. 读取英文原始字符串：
+1. 随机选择并保持结果：
 ```python
-csv_file: "strings.csv"
-use_translated: False
-random_select_count: -1
-translate_output: False
-输出: ["Hello World", "Good Morning", "Artificial Intelligence", ...]
-```
-
-2. 读取中文翻译字符串：
-```python
-csv_file: "strings.csv"
-use_translated: True
+csv_file: "template/string_list.csv"
 random_select_count: 3
-translate_output: False
-输出: ["你好世界", "早安", "人工智能"]
+reuse_last_result: True  # 保持使用上次的随机结果
 ```
 
-3. 选择指定编号的英文字符串并翻译：
+2. 使用翻译版本：
 ```python
-csv_file: "strings.csv"
-use_translated: False
-selected_numbers: "1,3"
-translate_output: True
-输出: 选择第1和第3个英文字符串并翻译（注：由于原文已经是英文，翻译可能会返回相同或相似的结果）
+csv_file: "template/string_list.csv"
+use_translated: True     # 使用 translate_string 列的内容
+random_select_count: 2
+reuse_last_result: False # 每次执行重新随机
 ```
 
-4. 选择指定编号的中文字符串并翻译为英文：
+3. 获取新的随机结果并保持：
 ```python
-csv_file: "strings.csv"
-use_translated: True
-selected_numbers: "1,3"
-translate_output: True
-输出: 选择第1和第3个中文字符串并翻译为英文
+# 步骤 1：获取新的随机结果
+reuse_last_result: False # 临时设为 False 获取新的随机结果
+
+# 步骤 2：保持新的随机结果
+reuse_last_result: True  # 改回 True 保持新的结果
 ```
+
+### 注意事项
+
+- CSV 文件必须包含 `string` 和 `translate_string` 两列
+- 当 `reuse_last_result` 为 True 时，节点会保持使用上一次的随机结果，直到你将其设为 False 以获取新的随机结果
+- 如果 CSV 文件不存在或格式不正确，节点将返回空列表
 
 ## String List To CSV 节点使用说明
 

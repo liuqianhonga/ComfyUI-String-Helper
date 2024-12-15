@@ -116,7 +116,8 @@ class StringList(BaseStringList):
                     "default": -1,
                     "min": -1,
                     "max": 10,
-                    "step": 1
+                    "step": 1,
+                    "display": "number"
                 }),
                 "selected_numbers": ("STRING", {
                     "default": "",
@@ -180,8 +181,11 @@ class StringList(BaseStringList):
                 "string_list": ("LIST",)
             }
         }
-
+    
     OUTPUT_IS_LIST = (False, True)
+    FUNCTION = "process"
+    CATEGORY = "String Helper"
+    IS_CHANGED = True
 
     def process(self, random_select_count, selected_numbers, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
         # Create a list of non-empty strings from inputs
@@ -216,6 +220,9 @@ class StringListFromCSV(BaseStringList):
                 "translate_output": ("BOOLEAN", {
                     "default": False,
                 }),
+                "reuse_last_result": ("BOOLEAN", {
+                    "default": False,
+                }),
             },
             "optional": {
                 "string_list": ("LIST",),
@@ -227,6 +234,11 @@ class StringListFromCSV(BaseStringList):
     OUTPUT_IS_LIST = (False, True)
     FUNCTION = "read_strings_from_csv"
     CATEGORY = "String Helper"
+    IS_CHANGED = True
+
+    def __init__(self):
+        super().__init__()
+        self.last_result = None
 
     def read_csv_file(self, csv_file, use_translated=False):
         """Read strings from CSV file with template format"""
@@ -240,10 +252,18 @@ class StringListFromCSV(BaseStringList):
         column = 'translate_string' if use_translated else 'string'
         return [row[column].strip() for row in rows if row and row[column].strip()]
 
-    def read_strings_from_csv(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, string_list=None):
-        # Read strings from CSV file
+    def read_strings_from_csv(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, reuse_last_result, string_list=None):
+        # If reusing last result and it exists, return it directly
+        if reuse_last_result and self.last_result is not None:
+            return self.last_result
+
+        # Read and process strings
         input_strings = self.read_csv_file(csv_file, use_translated)
-        return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
+        result = self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
+        
+        # Save result for future reuse
+        self.last_result = result
+        return result
 
 
 class StringListToCSV(BaseStringList):
