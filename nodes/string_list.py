@@ -188,8 +188,8 @@ class StringList(BaseStringList):
     IS_CHANGED = True
 
     def process(self, random_select_count, selected_numbers, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
-        # Create a list of non-empty strings from inputs
-        input_strings = [text for text in [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10] if text.strip()]
+        # Create a list of all strings from inputs, including empty ones
+        input_strings = [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10]
         return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
 
 

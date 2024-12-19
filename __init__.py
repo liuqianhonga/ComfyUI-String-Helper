@@ -13,12 +13,12 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "StringFormatter": "String Formatter",
-    "StringList": "String List",
-    "StringListFromCSV": "String List From CSV",
-    "StringListToCSV": "String List To CSV",
-    "ShowTranslateString": "Show Translate String",
-    "StringMatcher": "String Matcher"
+    "StringFormatter": "🐟String Formatter",
+    "StringList": "🐟String List",
+    "StringListFromCSV": "🐟String List From CSV",
+    "StringListToCSV": "🐟String List To CSV",
+    "ShowTranslateString": "🐟Show Translate String",
+    "StringMatcher": "🐟String Matcher"
 }
 
 WEB_DIRECTORY = "./web"
