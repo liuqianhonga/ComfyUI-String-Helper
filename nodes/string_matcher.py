@@ -27,6 +27,9 @@ class StringMatcher:
     CATEGORY = "String Helper"
     
     def match_string(self, condition_list, match_value, default_value):
+        if match_value is None:
+            return (default_value,)
+            
         match_str = str(match_value)
         
         conditions = [line.strip() for line in condition_list.split('\n') if line.strip()]
