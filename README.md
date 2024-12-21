@@ -1,6 +1,6 @@
 # ComfyUI 字符串自定义节点
 
-ComfyUI的字符串相关的自定义节点，其中包括 String Formatter、StringList 节点。此节点设计旨在提高用户在处理字符串时的效率和灵活性。
+ComfyUI的字符串相关的自定义节点，其中包括 String Formatter、StringList、StringListFromCSV、StringListToCSV、StringConverter、StringMatcher、TimeFormatter、ShowTranslateString 节点，以提高在处理字符串时的效率和灵活性。
 
 ![image](workflow.png)
 
@@ -315,3 +315,98 @@ default_value: "unknown color"
 - 如果找不到匹配项，将返回 default_value 指定的值
 - 条件列表中的空行会被自动忽略
 - 如果一个条件规则格式不正确（没有冒号），该规则会被跳过
+
+## TimeFormatter 节点使用说明
+
+TimeFormatter 节点允许你使用Python的日期时间格式化语法来格式化当前时间。你可以自由定制输出格式，支持年、月、日、时、分、秒等时间组件。
+
+### 节点参数
+
+- **format_string** (必需)：使用Python的strftime格式化语法的模板字符串，默认为 "%Y-%m-%d %H:%M:%S"
+
+### 使用示例
+
+1. 基础日期格式化：
+```python
+format_string: "%Y-%m-%d"
+输出: "2024-12-21"  # 仅显示年月日
+```
+
+2. 完整时间格式化：
+```python
+format_string: "%Y-%m-%d %H:%M:%S"
+输出: "2024-12-21 23:35:08"  # 显示年月日时分秒
+```
+
+3. 自定义格式：
+```python
+format_string: "现在是%Y年%m月%d日 %H点%M分"
+输出: "现在是2024年12月21日 23点35分"
+```
+
+### 常用格式代码
+
+- %Y：四位数的年份（如 2024）
+- %m：两位数的月份（01-12）
+- %d：两位数的日期（01-31）
+- %H：24小时制的小时（00-23）
+- %M：分钟（00-59）
+- %S：秒（00-59）
+
+## StringConverter 节点使用说明
+
+StringConverter 节点允许你将字符串转换为其他数据类型。支持多种常用数据类型的转换，并会在转换失败时抛出异常。
+
+### 节点参数
+
+- **input_string** (必需)：要转换的输入字符串
+- **target_type** (必需)：目标数据类型，可选值:
+  - INT：转换为整数
+  - FLOAT：转换为浮点数
+  - BOOL：转换为布尔值
+  - LIST：转换为列表（逗号分隔）
+  - DICT：转换为字典（JSON格式）
+
+### 使用示例
+
+1. 转换为整数：
+```python
+input_string: "123"
+target_type: "INT"
+输出: 123
+```
+
+2. 转换为浮点数：
+```python
+input_string: "123.45"
+target_type: "FLOAT"
+输出: 123.45
+```
+
+3. 转换为布尔值：
+```python
+input_string: "true"  # 或 "1", "yes", "y", "on"
+target_type: "BOOL"
+输出: True
+```
+
+4. 转换为列表：
+```python
+input_string: "a, b, c"
+target_type: "LIST"
+输出: ["a", "b", "c"]
+```
+
+5. 转换为字典：
+```python
+input_string: '{"name": "test", "value": 123}'
+target_type: "DICT"
+输出: {"name": "test", "value": 123}
+```
+
+### 错误处理
+
+- 如果转换失败，节点会抛出异常并显示详细的错误信息
+- 不会返回默认值，确保数据的准确性
+- 对于LIST类型，空字符串会返回空列表
+- 对于DICT类型，输入必须是有效的JSON格式字符串
