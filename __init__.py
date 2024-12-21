@@ -2,6 +2,7 @@ from .nodes.string_formatter import StringFormatter
 from .nodes.string_list import StringList, StringListFromCSV, StringListToCSV
 from .nodes.show_translate_string import ShowTranslateString
 from .nodes.string_matcher import StringMatcher
+from .nodes.time_formatter import TimeFormatter
 
 NODE_CLASS_MAPPINGS = {
     "StringFormatter": StringFormatter,
@@ -9,7 +10,8 @@ NODE_CLASS_MAPPINGS = {
     "StringListFromCSV": StringListFromCSV,
     "StringListToCSV": StringListToCSV,
     "ShowTranslateString": ShowTranslateString,
-    "StringMatcher": StringMatcher
+    "StringMatcher": StringMatcher,
+    "TimeFormatter": TimeFormatter
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -18,7 +20,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "StringListFromCSV": "🐟String List From CSV",
     "StringListToCSV": "🐟String List To CSV",
     "ShowTranslateString": "🐟Show Translate String",
-    "StringMatcher": "🐟String Matcher"
+    "StringMatcher": "🐟String Matcher",
+    "TimeFormatter": "🐟Time Formatter"
 }
 
 WEB_DIRECTORY = "./web"
