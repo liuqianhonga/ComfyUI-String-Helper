@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-string-helper"
+description = "NODES: String Formatter, String List"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["translators>=5.8.8", "chardet>=5.0.0"]
+
+[project.urls]
+Repository = "https://github.com/liuqianhonga/ComfyUI-String-Helper"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-String-Helper"
+Icon = ""
