@@ -10,6 +10,6 @@ Repository = "https://github.com/liuqianhonga/ComfyUI-String-Helper"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "liuqianhong"
 DisplayName = "ComfyUI-String-Helper"
-Icon = ""
+Icon = "🐟"
