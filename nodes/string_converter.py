@@ -1,4 +1,5 @@
 import json
+from .lib import ANY
 
 class StringConverter:
     """Converts a string to a specified type (INT, FLOAT, BOOL, LIST, DICT)"""
@@ -15,7 +16,7 @@ class StringConverter:
             },
         }
 
-    RETURN_TYPES = ("*",)
+    RETURN_TYPES = (ANY,)
     RETURN_NAMES = ("value",)
     FUNCTION = "convert"
     CATEGORY = "String Helper"
