@@ -1,4 +1,5 @@
 from .lib import ANY
+import json
 
 class StringMatcher:
     """
@@ -19,30 +20,56 @@ class StringMatcher:
                 }),
                 "match_value": (ANY, {"default": None}),
                 "default_value": ("STRING", {"default": ""}),
+                "target_type": (["STRING", "INT", "FLOAT", "BOOL", "LIST", "DICT"], {"default": "STRING"}),
             }
         }
     
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = (ANY,)
+    RETURN_NAMES = ("value",)
     FUNCTION = "match_string"
     CATEGORY = "String Helper"
     
-    def match_string(self, condition_list, match_value, default_value):
+    def match_string(self, condition_list, match_value, default_value, target_type):
         if match_value is None:
-            return (default_value,)
+            value = default_value
+        else:
+            match_str = str(match_value)
+            conditions = [line.strip() for line in condition_list.split('\n') if line.strip()]
             
-        match_str = str(match_value)
-        
-        conditions = [line.strip() for line in condition_list.split('\n') if line.strip()]
-        
-        for condition in conditions:
-            if ':' not in condition:
-                continue
+            value = default_value
+            for condition in conditions:
+                if ':' not in condition:
+                    continue
+                    
+                cond, val = condition.split(':', 1)
+                cond = cond.strip()
+                val = val.strip()
                 
-            cond, value = condition.split(':', 1)
-            cond = cond.strip()
-            value = value.strip()
-            
-            if cond == match_str:
+                if cond == match_str:
+                    value = val
+                    break
+
+        try:
+            if target_type == "STRING" or not value.strip():
                 return (value,)
-        
-        return (default_value,)
+            elif target_type == "INT":
+                value = int(float(value))
+                return (value,)
+            elif target_type == "FLOAT":
+                value = float(value)
+                return (value,)
+            elif target_type == "BOOL":
+                value = value.lower() in ('true', '1', 'yes', 'y', 'on')
+                return (value,)
+            elif target_type == "LIST":
+                if not value.strip():
+                    return ([],)
+                value = [item.strip() for item in value.split(",")]
+                return (value,)
+            elif target_type == "DICT":
+                value = json.loads(value)
+                return (value,)
+            else:
+                raise ValueError(f"Unsupported type: {target_type}")
+        except Exception as e:
+            raise Exception(f"[String Matcher] Error converting '{value}' to {target_type}: {str(e)}")
