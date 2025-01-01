@@ -14,40 +14,98 @@ class BaseStringList:
 
     @staticmethod
     def get_encoding(csv_path):
-        with open(csv_path, 'rb') as f:
-            raw_data = f.read()
-            result = chardet.detect(raw_data)
-            return result['encoding'] if result else None
-
-    @staticmethod
-    def read_csv_with_encoding(csv_path):
         """Read CSV file and detect encoding"""
-        encoding = BaseStringList.get_encoding(csv_path)
-        if encoding is None:
-            print("Unable to detect encoding for CSV file")
-            return None, None
-        print(f"Detected encoding for CSV file: {encoding}")
-
         try:
-            with open(csv_path, 'r', encoding=encoding, errors='replace') as f:
-                reader = csv.DictReader(f)
-                if not reader.fieldnames or 'string' not in reader.fieldnames or 'translate_string' not in reader.fieldnames:
-                    print(f"CSV file must have 'string' and 'translate_string' columns")
-                    return None, None
-                rows = list(reader)
-            print(f"Successfully read CSV file using {encoding} encoding")
-            return rows, encoding
+            with open(csv_path, 'rb') as f:
+                raw_data = f.read()
+                result = chardet.detect(raw_data)
+                return result['encoding']
         except Exception as e:
-            print(f"Failed to read with {encoding} encoding: {str(e)}")
-        return None, None
+            print(f"Error detecting encoding: {str(e)}")
+            return 'utf-8'
 
-    @staticmethod
-    def get_absolute_path(file_path):
+    def read_csv_with_encoding(self, csv_path):
+        """Read CSV file and detect encoding"""
+        try:
+            encoding = self.get_encoding(csv_path)
+            with open(csv_path, 'r', encoding=encoding) as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+                return rows, encoding
+        except Exception as e:
+            print(f"Error reading CSV file: {str(e)}")
+            return None, 'utf-8'
+
+    def get_absolute_path(self, file_path):
         """Convert relative path to absolute path based on project root"""
         if os.path.isabs(file_path):
             return file_path
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(current_dir, file_path)
+        
+        # Get the project root directory (parent of custom_nodes)
+        current_dir = os.path.dirname(os.path.abspath(__file__))  # nodes directory
+        project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..'))
+        
+        # Combine with the relative path
+        return os.path.join(project_root, file_path)
+
+    def save_to_csv(self, csv_file, rows_to_write, append_mode=True, check_duplicates=True):
+        """Common method to save data to CSV file
+        
+        Args:
+            csv_file: Path to the CSV file
+            rows_to_write: List of dictionaries with keys 'string', 'zh'/'translate_string', and 'tags'
+            append_mode: Whether to append to existing file
+            check_duplicates: Whether to check and skip duplicate strings
+            
+        Returns:
+            tuple: (processed_rows, skipped_rows)
+        """
+        try:
+            csv_path = self.get_absolute_path(csv_file)
+            processed_rows = []
+            skipped_rows = []
+
+            # Ensure the output directory exists
+            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+            # Read existing data and check for duplicates
+            existing_strings = set()
+            current_encoding = 'utf-8'
+            if os.path.exists(csv_path):
+                rows, encoding = self.read_csv_with_encoding(csv_path)
+                if rows is not None:
+                    existing_strings = {row['string'] for row in rows}
+                    current_encoding = encoding
+
+            # Determine write mode
+            if not os.path.exists(csv_path):
+                mode = 'w'
+            else:
+                mode = 'a' if append_mode else 'w'
+
+            with open(csv_path, mode, encoding=current_encoding, newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=['string', 'zh', 'tags'])
+                
+                # Write header if it's a new file or overwriting
+                if mode == 'w':
+                    writer.writeheader()
+                    existing_strings.clear()
+
+                # Write data
+                for row in rows_to_write:
+                    # Skip if string already exists in append mode
+                    if check_duplicates and mode == 'a' and row['string'] in existing_strings:
+                        skipped_rows.append(row)
+                        continue
+
+                    writer.writerow(row)
+                    processed_rows.append(row)
+
+            return processed_rows, skipped_rows
+
+        except Exception as e:
+            print(f"Error writing to CSV: {e}")
+            return [], rows_to_write
 
     def translate_strings(self, strings):
         """Translate a list of strings to English using Bing translator with auto language detection"""
@@ -200,10 +258,15 @@ class StringListFromCSV(BaseStringList):
             "required": {
                 "csv_file": ("STRING", {
                     "default": "template/string_list.csv",
-                    "placeholder": "Path to CSV file (template: string,translate_string)"
+                    "placeholder": "Path to CSV file (template: string,zh)"
                 }),
                 "use_translated": ("BOOLEAN", {
                     "default": False,
+                }),
+                "filter_tags": ("STRING", {
+                    "default": "",
+                    "multiline": False,
+                    "placeholder": "Filter by tags (comma-separated)"
                 }),
                 "random_select_count": ("INT", {
                     "default": -1,
@@ -240,7 +303,7 @@ class StringListFromCSV(BaseStringList):
         super().__init__()
         self.last_result = None
 
-    def read_csv_file(self, csv_file, use_translated=False):
+    def read_csv_file(self, csv_file, filter_tags="", use_translated=False):
         """Read strings from CSV file with template format"""
         csv_path = self.get_absolute_path(csv_file)
         
@@ -248,17 +311,33 @@ class StringListFromCSV(BaseStringList):
         if rows is None:
             return []
             
-        # Read strings based on the use_translated flag
-        column = 'translate_string' if use_translated else 'string'
-        return [row[column].strip() for row in rows if row and row[column].strip()]
+        # Parse filter tags
+        filter_tag_list = [tag.strip() for tag in filter_tags.split(',') if tag.strip()]
+        
+        # Read strings based on the use_translated flag and filter by tags
+        column = 'zh' if use_translated else 'string'
+        filtered_rows = []
+        for row in rows:
+            if not row or not row.get(column, '').strip():
+                continue
+                
+            # If filter tags are specified, check if any tag matches
+            if filter_tag_list:
+                row_tags = row.get('tags', '')
+                if not any(tag in row_tags for tag in filter_tag_list):
+                    continue
+                    
+            filtered_rows.append(row[column].strip())
+            
+        return filtered_rows
 
-    def read_strings_from_csv(self, csv_file, use_translated, random_select_count, selected_numbers, translate_output, reuse_last_result, string_list=None):
+    def read_strings_from_csv(self, csv_file, use_translated, filter_tags, random_select_count, selected_numbers, translate_output, reuse_last_result, string_list=None):
         # If reusing last result and it exists, return it directly
         if reuse_last_result and self.last_result is not None:
             return self.last_result
 
         # Read and process strings
-        input_strings = self.read_csv_file(csv_file, use_translated)
+        input_strings = self.read_csv_file(csv_file, filter_tags, use_translated)
         result = self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
         
         # Save result for future reuse
@@ -274,6 +353,10 @@ class StringListToCSV(BaseStringList):
                 "csv_file": ("STRING", {
                     "default": "output/string_list_output.csv",
                     "placeholder": "Path to save CSV file"
+                }),
+                "tags": ("STRING", {
+                    "default": "",
+                    "placeholder": "Comma-separated tags for the prompt"
                 }),
                 "translate": ("BOOLEAN", {
                     "default": False,
@@ -295,7 +378,7 @@ class StringListToCSV(BaseStringList):
     FUNCTION = "write_to_csv"
     CATEGORY = "String Helper"
 
-    def write_to_csv(self, csv_file, translate, append_mode, string=None, string_list=None):
+    def write_to_csv(self, csv_file, tags, translate, append_mode, string=None, string_list=None):
         """Write string list to CSV file with optional translation"""
         # Initialize processed_strings and skipped_strings
         processed_strings = []
@@ -317,57 +400,98 @@ class StringListToCSV(BaseStringList):
         if len(string_list) == 0 or not string_list:
             return processed_strings, skipped_strings
 
+        # Prepare rows for CSV
+        rows_to_write = []
+        for string_value in string_list:
+            zh_text = TranslationUtils.translate_with_length_check([string_value], 'zh')[0] if translate else ''
+            rows_to_write.append({
+                'string': string_value,
+                'zh': zh_text,
+                'tags': tags
+            })
+
+        # Save to CSV using common method
+        processed_rows, skipped_rows = self.save_to_csv(csv_file, rows_to_write, append_mode)
+        
+        # Extract strings from processed and skipped rows
+        processed_strings = [row['string'] for row in processed_rows]
+        skipped_strings = [row['string'] for row in skipped_rows]
+        
+        return processed_strings, skipped_strings
+
+
+class JsonToCSV(BaseStringList):
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "json_string": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                    "placeholder": '{"description": "Detailed image description", "zh": "中文描述", "tags": "Tags with translations"}'
+                }),
+                "csv_file": ("STRING", {
+                    "default": "output/string_list_output.csv",
+                    "placeholder": "Path to save CSV file"
+                }),
+                "append_mode": ("BOOLEAN", {
+                    "default": True,
+                    "label": "Append to file"
+                }),
+            }
+        }
+    
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("message",)
+    OUTPUT_NODE = True
+    FUNCTION = "write_json_to_csv"
+    CATEGORY = "String Helper"
+
+    def write_json_to_csv(self, json_string, csv_file, append_mode):
+        """Write JSON string to CSV file and return log message"""
+        import json
+
         try:
-            csv_path = self.get_absolute_path(csv_file)
+            # Parse JSON string
+            data = json.loads(json_string)
+            
+            # Validate required fields
+            required_fields = ['description', 'zh', 'tags']
+            if not all(field in data for field in required_fields):
+                message = f"Error: JSON must contain all required fields: {required_fields}"
+                print(message)
+                return (message,)
 
-            # Ensure the output directory exists
-            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+            # Prepare row for CSV
+            row = {
+                'string': data['description'],
+                'zh': data['zh'],
+                'tags': data['tags']
+            }
 
-            # Read existing data and check for duplicates
-            existing_strings = set()
-            current_encoding = 'utf-8'
-            if os.path.exists(csv_path):
-                rows, encoding = self.read_csv_with_encoding(csv_path)
-                if rows is not None:
-                    existing_strings = {row['string'] for row in rows}
-                    current_encoding = encoding
-
-            # Determine write mode based on append_mode and file existence
-            if not os.path.exists(csv_path):
-                # If file doesn't exist, always use write mode
-                mode = 'w'
-            else:
-                # If file exists and append mode is True, use append mode
-                mode = 'a' if append_mode else 'w'
-
-            with open(csv_path, mode, encoding=current_encoding, newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=['string', 'translate_string'])
+            # Save to CSV using common method
+            processed_rows, skipped_rows = self.save_to_csv(csv_file, [row], append_mode)
+            
+            processed_count = len(processed_rows)
+            skipped_count = len(skipped_rows)
+            
+            # Build log message
+            messages = []
+            if processed_count > 0:
+                messages.append(f"Successfully wrote {processed_count} row(s) to {csv_file}")
+            if skipped_count > 0:
+                messages.append(f"Skipped {skipped_count} duplicate row(s)")
                 
-                # Write header if it's a new file or overwriting
-                if mode == 'w':
-                    writer.writeheader()
-                    existing_strings.clear()  # Clear existing strings if overwriting
+            message = ". ".join(messages) if messages else "No changes made"
+            print(message)
+            
+            return (message,)
 
-                # Write data
-                for i, string in enumerate(string_list):
-                    # Skip if string already exists in append mode
-                    if mode == 'a' and string in existing_strings:
-                        skipped_strings.append(string)
-                        continue
-
-                    # Translate string only when writing
-                    translate_string = TranslationUtils.translate_with_length_check([string], 'zh')[0] if translate else ''
-
-                    row = {
-                        'string': string,
-                        'translate_string': translate_string
-                    }
-                    writer.writerow(row)
-                    processed_strings.append(string)
-
-            print(f"Successfully processed {len(processed_strings)} strings ({len(skipped_strings)} skipped) to {csv_path} using {current_encoding} encoding")
-            return processed_strings, skipped_strings
-
+        except json.JSONDecodeError as e:
+            message = f"Error parsing JSON string: {e}"
+            print(message)
+            return (message,)
         except Exception as e:
-            print(f"Error writing to CSV file: {str(e)}")
-            return [], string_list
+            message = f"Error writing to CSV: {e}"
+            print(message)
+            return (message,)
