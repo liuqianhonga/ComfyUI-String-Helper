@@ -6,11 +6,9 @@ from ..translation_utils import TranslationUtils
 
 class BaseStringList:
     """Base class for string list operations"""
-    
-    RETURN_TYPES = ("LIST", "STRING",)
-    RETURN_NAMES = ("string_list", "strings",)
-    FUNCTION = "process"
-    CATEGORY = "String Helper"
+
+    def __init__(self):
+        self.current_index = 0
 
     @staticmethod
     def get_encoding(csv_path):
@@ -53,7 +51,7 @@ class BaseStringList:
         
         Args:
             csv_file: Path to the CSV file
-            rows_to_write: List of dictionaries with keys 'string', 'zh'/'translate_string', and 'tags'
+            rows_to_write: List of dictionaries with keys 'string', 'zh', and 'tags'
             append_mode: Whether to append to existing file
             check_duplicates: Whether to check and skip duplicate strings
             
@@ -127,27 +125,44 @@ class BaseStringList:
             print("Invalid number format. Please use comma-separated numbers (e.g., '1,3,5')")
             return []
 
-    def process_string_selection(self, input_strings, random_select_count, selected_numbers, translate_output, string_list=None):
-        """Process string selection with common logic"""
+    def process_string_selection(self, input_strings, p3_select_random_count, p1_select_by_numbers, translate_output, p2_select_sequential=False, string_list=None):
+        """Process string selection with common logic
+        
+        Args:
+            input_strings: List of input strings to select from
+            p1_select_by_numbers: Priority 1 - Select strings by their numbers (comma-separated)
+            p2_select_sequential: Priority 2 - Select strings sequentially
+            p3_select_random_count: Priority 3 - Number of strings to select randomly
+            translate_output: Whether to translate the selected strings
+            string_list: Optional additional strings to append
+        """
         # Early return if no input strings
         if not input_strings:
             return ([], [])
 
         # Process string selection
-        if selected_numbers.strip():
-            # Use selected numbers if provided
-            selected_input_strings = self.get_selected_strings(input_strings, selected_numbers)
+        if p1_select_by_numbers.strip():
+            # Use selected numbers if provided (highest priority)
+            selected_input_strings = self.get_selected_strings(input_strings, p1_select_by_numbers)
+        elif p2_select_sequential:
+            # Use sequential selection if enabled (second priority)
+            if not input_strings:
+                selected_input_strings = []
+            else:
+                selected_input_strings = [input_strings[self.current_index]]
+                # Update index for next selection
+                self.current_index = (self.current_index + 1) % len(input_strings)
         else:
-            # Otherwise use random selection
-            if random_select_count == -1:
+            # Otherwise use random selection (lowest priority)
+            if p3_select_random_count == -1:
                 # Use all input strings
                 selected_input_strings = input_strings
-            elif random_select_count == 0:
+            elif p3_select_random_count == 0:
                 # Select none
                 selected_input_strings = []
             else:
                 # Randomly select specified number of strings
-                count = min(random_select_count, len(input_strings))
+                count = min(p3_select_random_count, len(input_strings))
                 selected_input_strings = random.sample(input_strings, count)
         
         # Combine with optional string_list if provided
@@ -164,22 +179,45 @@ class BaseStringList:
         # Return the same list for both outputs
         return (final_strings, final_strings)
 
+class StringTranslate(BaseStringList):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "translate_output": ("BOOLEAN", {"default": False}),
+                "string": ("STRING", {"multiline": True}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("string",)
+    FUNCTION = "process_string"
+    CATEGORY = "String Helper"
+
+    def process_string(self, string, translate_output):
+        if translate_output:
+            final_strings = self.translate_strings(string)
+            return (final_strings,)
+        return (string,)
 
 class StringList(BaseStringList):
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "random_select_count": ("INT", {
+                "p1_select_by_numbers": ("STRING", {
+                    "default": "",
+                    "placeholder": "Priority 1: Comma-separated numbers (e.g. 1,3,5)"
+                }),
+                "p2_select_sequential": ("BOOLEAN", {
+                    "default": False,
+                }),
+                "p3_select_random_count": ("INT", {
                     "default": -1,
                     "min": -1,
                     "max": 10,
                     "step": 1,
                     "display": "number"
-                }),
-                "selected_numbers": ("STRING", {
-                    "default": "",
-                    "placeholder": "e.g. 1,3,5 (leave empty to use random_select_count)"
                 }),
                 "translate_output": ("BOOLEAN", {
                     "default": False,
@@ -240,15 +278,17 @@ class StringList(BaseStringList):
             }
         }
     
+    RETURN_TYPES = ("LIST", "STRING",)
+    RETURN_NAMES = ("string_list", "strings",)
     OUTPUT_IS_LIST = (False, True)
     FUNCTION = "process"
     CATEGORY = "String Helper"
     IS_CHANGED = True
 
-    def process(self, random_select_count, selected_numbers, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
+    def process(self, p1_select_by_numbers, p2_select_sequential, p3_select_random_count, translate_output, string1, string2, string3, string4, string5, string6, string7, string8, string9, string10, string_list=None):
         # Create a list of all strings from inputs, including empty ones
         input_strings = [string1, string2, string3, string4, string5, string6, string7, string8, string9, string10]
-        return self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
+        return self.process_string_selection(input_strings, p3_select_random_count, p1_select_by_numbers, translate_output, p2_select_sequential, string_list)
 
 
 class StringListFromCSV(BaseStringList):
@@ -268,17 +308,20 @@ class StringListFromCSV(BaseStringList):
                     "multiline": False,
                     "placeholder": "Filter by tags (comma-separated)"
                 }),
-                "random_select_count": ("INT", {
+                "p1_select_by_numbers": ("STRING", {
+                    "default": "",
+                    "multiline": False,
+                    "placeholder": "Priority 1: Comma-separated numbers (e.g. 1,3,5)"
+                }),
+                "p2_select_sequential": ("BOOLEAN", {
+                    "default": False,
+                }),
+                "p3_select_random_count": ("INT", {
                     "default": -1,
                     "min": -1,
                     "max": 999999,
                     "step": 1,
                     "display": "number"
-                }),
-                "selected_numbers": ("STRING", {
-                    "default": "",
-                    "multiline": False,
-                    "placeholder": "Comma-separated numbers (e.g., 1,3,5)"
                 }),
                 "translate_output": ("BOOLEAN", {
                     "default": False,
@@ -331,14 +374,21 @@ class StringListFromCSV(BaseStringList):
             
         return filtered_rows
 
-    def read_strings_from_csv(self, csv_file, use_translated, filter_tags, random_select_count, selected_numbers, translate_output, reuse_last_result, string_list=None):
+    def read_strings_from_csv(self, csv_file, use_translated, filter_tags, p1_select_by_numbers, p2_select_sequential, p3_select_random_count, translate_output, reuse_last_result, string_list=None):
         # If reusing last result and it exists, return it directly
         if reuse_last_result and self.last_result is not None:
             return self.last_result
 
         # Read and process strings
         input_strings = self.read_csv_file(csv_file, filter_tags, use_translated)
-        result = self.process_string_selection(input_strings, random_select_count, selected_numbers, translate_output, string_list)
+        result = self.process_string_selection(
+            input_strings, 
+            p3_select_random_count, 
+            p1_select_by_numbers, 
+            translate_output,
+            p2_select_sequential,
+            string_list
+        )
         
         # Save result for future reuse
         self.last_result = result

@@ -73,56 +73,63 @@ arg1: "世界"
 
 ## StringList 节点使用说明
 
-StringList 节点允许你灵活地选择和翻译字符串。你可以通过手动输入、随机选择或指定编号选择字符串，并可选地将其翻译为英文。
+StringList 节点允许你灵活地选择和翻译字符串。你可以通过手动输入、随机选择、顺序循环或指定编号选择字符串，并可选地将其翻译为英文。
 
 ### 节点参数
 
-- **random_select_count** (必需)：随机选择字符串的数量。特殊值:
+- **p1_select_by_numbers** (可选)：最高优先级，通过输入序号（如 "1,3,5"）选择指定位置的字符串
+- **p2_select_sequential** (可选)：第二优先级，布尔值，默认为 `False`。启用后，每次调用按顺序返回下一个字符串，到达列表末尾后自动从头开始
+- **p3_select_random_count** (必需)：最低优先级，随机选择字符串的数量。特殊值:
   - `-1`：返回所有输入字符串
   - `0`：返回空列表
   - `1-10`：随机选择指定数量的字符串
-- **selected_numbers** (可选)：指定要选择的字符串编号，多个编号用逗号分隔，如"1,3,5"。当此字段有值时，`random_select_count` 失效
 - **translate_output** (可选)：布尔值，默认为 `False`。启用后，将选定的字符串从自动检测的语言翻译为英文
 - **string1** - **string10** (必需)：多行字符串输入字段，用于手动输入字符串
 - **string_list** (可选)：额外的字符串列表输入，用于合并外部字符串列表
 
 ### 使用示例
 
-1. 随机选择字符串：
+1. 按序号选择字符串（最高优先级）:
 ```python
-random_select_count: 3
-translate_output: False
+p1_select_by_numbers: "1,3,5"
 string1: "你好"
 string2: "世界"
 string3: "欢迎"
+string4: "使用"
+string5: "ComfyUI"
+输出: ["你好", "欢迎", "ComfyUI"]
+```
+
+2. 顺序循环选择（第二优先级）:
+```python
+p2_select_sequential: True
+string1: "第一个"
+string2: "第二个"
+string3: "第三个"
+第一次输出: ["第一个"]
+第二次输出: ["第二个"]
+第三次输出: ["第三个"]
+第四次输出: ["第一个"]  # 自动从头开始
+```
+
+3. 随机选择字符串（最低优先级）:
+```python
+p3_select_random_count: 3
+string1: "你好"
+string2: "世界"
+string3: "欢迎"
+string4: "使用"
+string5: "ComfyUI"
 输出: 随机选择3个字符串
 ```
 
-2. 指定编号选择字符串：
+4. 启用翻译:
 ```python
-selected_numbers: "1,3"
+p1_select_by_numbers: "1,2"
 translate_output: True
 string1: "你好"
 string2: "世界"
-string3: "欢迎"
-输出: ["Hello", "Welcome"]
-```
-
-2. 指定编号选择字符串：
-```python
-selected_numbers: "1,3"
-translate_output: False
-string1: "你好"
-string2: "世界"
-string3: "欢迎"
-输出: ["你好", "欢迎"]
-```
-
-3. 使用外部字符串列表：
-```python
-random_select_count: 2
-string_list: ["额外1", "额外2"]
-输出: 随机选择2个字符串并合并外部列表
+输出: ["hello", "world"]
 ```
 
 ## StringListFromCSV 节点使用说明
@@ -410,3 +417,37 @@ target_type: "DICT"
 - 不会返回默认值，确保数据的准确性
 - 对于LIST类型，空字符串会返回空列表
 - 对于DICT类型，输入必须是有效的JSON格式字符串
+
+## String Translate 节点使用说明
+
+String Translate 节点提供单独的字符串翻译功能，可以将输入的字符串翻译为英文。
+
+### 节点参数
+
+- **string** (必需)：要翻译的字符串
+- **translate_output** (必需)：布尔值，默认为 `False`。控制是否执行翻译:
+  - `False`：直接返回原字符串
+  - `True`：将字符串翻译为英文
+
+### 使用示例
+
+1. 基础翻译:
+```python
+string: "你好，世界"
+translate_output: True
+输出: "Hello, world"
+```
+
+2. 不执行翻译:
+```python
+string: "你好，世界"
+translate_output: False
+输出: "你好，世界"
+```
+
+### 特点
+
+- 支持自动语言检测
+- 使用必应翻译服务
+- 适合单个字符串的快速翻译
+- 与 StringList/StringListFromCSV 节点的翻译功能相同
