@@ -18,9 +18,11 @@ class StringMatcher:
                     "multiline": True,
                     "placeholder": "Input conditions, one per line, e.g.:\nred:red color\nblue:blue color"
                 }),
+                "target_type": (["STRING", "INT", "FLOAT", "BOOL", "LIST", "DICT"], {"default": "STRING"}),
+            },
+            "optional": {
                 "match_value": (ANY, {"default": None}),
                 "default_value": ("STRING", {"default": ""}),
-                "target_type": (["STRING", "INT", "FLOAT", "BOOL", "LIST", "DICT"], {"default": "STRING"}),
             }
         }
     
@@ -29,7 +31,7 @@ class StringMatcher:
     FUNCTION = "match_string"
     CATEGORY = "String Helper"
     
-    def match_string(self, condition_list, match_value, default_value, target_type):
+    def match_string(self, condition_list, target_type, match_value=None, default_value=""):
         if match_value is None:
             value = default_value
         else:
