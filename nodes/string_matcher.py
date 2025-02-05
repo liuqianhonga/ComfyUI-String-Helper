@@ -1,10 +1,12 @@
 from .lib import ANY
 import json
+import re
 
 class StringMatcher:
     """
     A node that matches a string against a list of conditions and returns the matched value.
     Each condition in the list should be in the format "condition:value".
+    The condition can be a regular expression pattern.
     """
     
     def __init__(self):
@@ -16,7 +18,7 @@ class StringMatcher:
             "required": {
                 "condition_list": ("STRING", {
                     "multiline": True,
-                    "placeholder": "Input conditions, one per line, e.g.:\nred:red color\nblue:blue color"
+                    "placeholder": "Input conditions, one per line, e.g.:\nred:red color\n.*blue.*:blue color\n\\d+:number found"
                 }),
                 "target_type": (["STRING", "INT", "FLOAT", "BOOL", "LIST", "DICT"], {"default": "STRING"}),
             },
@@ -47,9 +49,15 @@ class StringMatcher:
                 cond = cond.strip()
                 val = val.strip()
                 
-                if cond == match_str:
-                    value = val
-                    break
+                try:
+                    if re.match(f"^{cond}$", match_str):
+                        value = val
+                        break
+                except re.error:
+                    # If regex is invalid, try exact match
+                    if cond == match_str:
+                        value = val
+                        break
 
         try:
             if target_type == "STRING" or not value.strip():

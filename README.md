@@ -273,55 +273,78 @@ String Matcher 节点用于从一组条件匹配规则中找到与输入值匹�
 
 ### 节点参数
 
-- **condition_list** (必需)：多行文本，每行包含一个匹配规则，格式为 "条件:值"
-- **match_value** (必需)：要匹配的值，支持任意类型（会被转换为字符串进行匹配）
-- **default_value** (必需)：当没有找到匹配项时返回的默认值，默认为空字符串
+必需参数：
+- **condition_list**：多行文本，每行包含一个匹配规则，格式为 "条件:值"
+- **target_type**：返回值的类型，可选值：
+  - STRING：字符串（默认）
+  - INT：整数
+  - FLOAT：浮点数
+  - BOOL：布尔值
+  - LIST：列表（逗号分隔）
+  - DICT：字典（JSON格式）
 
-### 使用示例
+可选参数：
+- **match_value**：要匹配的值，支持任意类型（会被转换为字符串进行匹配）
+- **default_value**：当没有找到匹配项时返回的默认值，默认为空字符串
 
-1. 基础匹配：
-```python
-condition_list: """
-red:red color
-blue:blue color
-green:green color
-"""
-match_value: "red"
-default_value: "unknown color"
-输出: "red color"
+### 功能特点:
+- 支持条件列表匹配
+- 返回第一个匹配条件对应的值
+
+### 正则表达式支持:
+条件部分现在支持正则表达式模式，实现更灵活的匹配：
+```
+# 基础模式
+.*蓝色.*:包含蓝色
+\d+:包含数字
+^测试:以测试开头
+\.png$:以.png结尾
+
+# 常用场景
+.*LoRA.*:LoRA模型
+E:\\.*:Windows路径
+.*\.safetensors$:Safetensors文件
+^v\d+\.\d+:版本号
+[Bb]atch.*:以batch或Batch开头
 ```
 
-2. 数字匹配：
-```python
-condition_list: """
-1:one
-2:two
-3:three
-"""
-match_value: 2  # 数字类型会被转换为字符串 "2"
-default_value: "unknown number"
-输出: "two"
+### 示例:
+
+基础匹配：
+```
+红色:这是红色
+蓝色:这是蓝色
+绿色:这是绿色
 ```
 
-3. 使用默认值：
-```python
-condition_list: """
-red:red color
-blue:blue color
-"""
-match_value: "yellow"
-default_value: "unknown color"
-输出: "unknown color"  # 没有找到匹配项时返回默认值
+正则表达式匹配：
+```
+# 文件路径
+.*\\train\\.*:训练数据
+.*\\test\\.*:测试数据
+
+# 文件类型
+.*\.(jpg|png|webp)$:图片文件
+.*\pth$:PyTorch模型
+
+# 版本模式
+v\d\.\d\.\d:语义版本
+beta.*:测试版本
 ```
 
-### 注意事项
+类型转换：
+```
+true:1
+false:0
+```
 
-- 每个条件规则必须包含一个冒号 (:) 来分隔条件和值
-- 匹配值（match_value）可以是任意类型，会被自动转换为字符串进行匹配
-- 匹配是精确匹配，大小写敏感
-- 如果找不到匹配项，将返回 default_value 指定的值
-- 条件列表中的空行会被自动忽略
-- 如果一个条件规则格式不正确（没有冒号），该规则会被跳过
+### 输出类型:
+- STRING (默认)
+- INT (整数)
+- FLOAT (浮点数)
+- BOOL (布尔值)
+- LIST (逗号分隔的列表)
+- DICT (JSON格式的字典)
 
 ## TimeFormatter 节点使用说明
 
