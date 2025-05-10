@@ -1,49 +1,59 @@
-import translators.server as tss
+import translators as ts
 import re
 
-class TranslationUtils:
-    @staticmethod
-    def translate_with_length_check(strings, target_language):
-        translated_strings = []
-        for text in strings:
-            # Check if the string is too long and split if necessary
-            if len(text) > 500:  
-                parts = text.split('\n')  # Split by paragraphs
-                temp_translated_strings = []
-                for part in parts:
-                    if len(part) > 500:
-                        sub_parts = re.split(r'(?<=[.!?]) +', part)  # Split long paragraphs by sentences
-                        for sub_part in sub_parts:
-                            if len(sub_part) > 500:
-                                sub_sub_parts = [sub_part[i:i+500] for i in range(0, len(sub_part), 500)]  
-                                for sub_sub_part in sub_sub_parts:
-                                    try:
-                                        translated_string = tss.bing(sub_sub_part, from_language='auto', to_language=target_language)
-                                        temp_translated_strings.append(translated_string)
-                                    except Exception as e:
-                                        temp_translated_strings.append(f"Translation error: {str(e)}")  
-                            else:
-                                try:
-                                    translated_string = tss.bing(sub_part, from_language='auto', to_language=target_language)
-                                    temp_translated_strings.append(translated_string)
-                                except Exception as e:
-                                    temp_translated_strings.append(f"Translation error: {str(e)}")  
-                    else:
-                        try:
-                            translated_string = tss.bing(part, from_language='auto', to_language=target_language)
-                            temp_translated_strings.append(translated_string)
-                        except Exception as e:
-                            temp_translated_strings.append(f"Translation error: {str(e)}")  
-                # Merge translated strings if they were split
-                if len(temp_translated_strings) > 1:
-                    translated_strings.append(' '.join(temp_translated_strings))
-                else:
-                    translated_strings.append(temp_translated_strings[0] if temp_translated_strings else '')
-            else:
-                try:
-                    translated_string = tss.bing(text, from_language='auto', to_language=target_language)
-                    translated_strings.append(translated_string)
-                except Exception as e:
-                    translated_strings.append(f"Translation error: {str(e)}")  
+def split_text_for_translation(text):
+    """
+    按段落和完整句子拆分文本，返回句子列表（保持原有段落结构）。
+    """
+    paragraphs = text.split('\n')
+    split_paragraphs = []
+    # 句子分隔符：句号、问号、感叹号（中英文）
+    sentence_pattern = re.compile(r'([^。！？!?\r\n]+[。！？!?])', re.M)
+    for para in paragraphs:
+        if not para.strip():
+            split_paragraphs.append([''])
+            continue
+        sentences = sentence_pattern.findall(para)
+        # 若正则未能分出句子，则整体作为一句
+        if not sentences:
+            sentences = [para]
+        split_paragraphs.append(sentences)
+    return split_paragraphs
 
-        return translated_strings
+def translate_text(text, to_lang='zh'):
+    """
+    自动处理长文本，按段落和句子拆分，逐句翻译，组合返回。
+    """
+    if not text:
+        return ""
+    try:
+        # 拆分文本为段落和句子
+        split_paragraphs = split_text_for_translation(text)
+        translated_paragraphs = []
+        for sentences in split_paragraphs:
+            if sentences == ['']:
+                translated_paragraphs.append('')
+                continue
+            translated_sentences = []
+            for sent in sentences:
+                sent = sent.strip()
+                if not sent:
+                    continue
+                # 逐句翻译
+                translated = ts.translate_text(sent, translator='bing', from_language='auto', to_language=to_lang)
+                translated_sentences.append(translated)
+            translated_paragraphs.append(''.join(translated_sentences))
+        return '\n'.join(translated_paragraphs)
+    except Exception as e:
+        return f"[翻译失败] {str(e)}"
+
+def translate_texts(strings, target_language):
+    translated_strings = []
+    for text in strings:
+        try:
+            translated_string = translate_text(text, target_language)
+            translated_strings.append(translated_string)
+        except Exception as e:
+            translated_strings.append(f"Translation error: {str(e)}")  
+
+    return translated_strings

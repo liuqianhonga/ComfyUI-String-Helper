@@ -2,7 +2,7 @@ import random
 import os
 import csv
 import chardet
-from ..translation_utils import TranslationUtils
+from ..translation_utils import translate_texts
 
 class BaseStringList:
     """Base class for string list operations"""
@@ -108,7 +108,7 @@ class BaseStringList:
     def translate_strings(self, strings):
         """Translate a list of strings to English using Bing translator with auto language detection"""
         try:
-            translated_strings = TranslationUtils.translate_with_length_check(strings, 'en')
+            translated_strings = translate_texts(strings, 'en')
             return translated_strings
         except Exception as e:
             print(f"Translation error: {str(e)}")
@@ -453,7 +453,7 @@ class StringListToCSV(BaseStringList):
         # Prepare rows for CSV
         rows_to_write = []
         for string_value in string_list:
-            zh_text = TranslationUtils.translate_with_length_check([string_value], 'zh')[0] if translate else ''
+            zh_text = translate_texts([string_value], 'zh')[0] if translate else ''
             rows_to_write.append({
                 'string': string_value,
                 'zh': zh_text,

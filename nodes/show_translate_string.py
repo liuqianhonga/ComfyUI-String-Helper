@@ -1,4 +1,4 @@
-from ..translation_utils import TranslationUtils
+from ..translation_utils import translate_texts
 
 class ShowTranslateString:
     @classmethod
@@ -32,6 +32,6 @@ class ShowTranslateString:
             strings_to_translate = [str(input_strings)]
         
         #逐个翻译每个字符串
-        translated_strings = TranslationUtils.translate_with_length_check(strings_to_translate, target_language)
+        translated_strings = translate_texts(strings_to_translate, target_language)
         
         return {"ui": {"translated_strings": translated_strings}, "result": (translated_strings,)}
